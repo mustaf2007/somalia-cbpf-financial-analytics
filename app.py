@@ -94,6 +94,57 @@ hr { border-color: #DCE4ED; }
   .stTabs [data-baseweb="tab-list"] { flex-wrap: wrap; }
   .stTabs [data-baseweb="tab"] { font-size: .78rem; padding: 0 9px; }
 }
+/* Contrast and light-theme consistency refinements */
+[data-testid="stSidebar"] { color: #243447 !important; }
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
+  color: #33465C !important;
+}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] section,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
+  background: #FFFFFF !important; border: 1px dashed #AFC0D0 !important;
+  border-radius: 12px !important; color: #33465C !important;
+}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] button {
+  background: #FFFFFF !important; color: #142B4A !important;
+  border: 1px solid #B8C7D6 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+  background: #FFFFFF !important; border-color: #C7D3DF !important;
+  color: #243447 !important; border-radius: 9px !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+  background: #DCEEF0 !important; border: 1px solid #B8D8DB !important;
+  color: #145B64 !important; border-radius: 7px !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] span { color: #145B64 !important; }
+[data-testid="stSidebar"] [data-baseweb="slider"] [role="slider"] {
+  background: #087E8B !important; border-color: #087E8B !important;
+}
+[data-testid="stSidebar"] [data-baseweb="slider"] [data-testid="stTickBar"] {
+  background: #C7D5DF !important;
+}
+.stTabs [data-baseweb="tab"] {
+  color: #40536A !important; opacity: 1 !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+  color: #087E8B !important; background: #F7FAFC !important;
+}
+.stTabs [aria-selected="true"] {
+  color: #087E8B !important; font-weight: 750 !important;
+}
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea {
+  background: #FFFFFF !important; color: #243447 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] svg { fill: #52677D !important; }
+[data-testid="stSidebar"] small,
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+  color: #52677D !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
