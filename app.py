@@ -109,6 +109,7 @@ def build_pdf_report(metrics: dict, donor_summary: pd.DataFrame, annual_summary:
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
                             topMargin=17*mm, bottomMargin=17*mm)
     styles = getSampleStyleSheet()
+    ratio_label = "not available" if pd.isna(metrics["payment_ratio"]) else f"{metrics['payment_ratio']:.1%}"
     story = [
         Paragraph("Somalia Humanitarian Financing Intelligence", styles["Title"]),
         Paragraph("CBPF Contributions — Analytical Report", styles["Heading2"]),
@@ -119,8 +120,7 @@ def build_pdf_report(metrics: dict, donor_summary: pd.DataFrame, annual_summary:
             f"The selected data contain {metrics['records']:,} contribution records from "
             f"{metrics['donors']:,} donors. Recorded pledges total {money(metrics['pledges'])} "
             f"source units and recorded payments total {money(metrics['payments'])} source units. "
-            f"The payment-to-pledge ratio is "
-            f"{'not available' if pd.isna(metrics['payment_ratio']) else f\"{metrics['payment_ratio']:.1%}\"}.",
+            f"The payment-to-pledge ratio is {ratio_label}.",
             styles["BodyText"]
         ),
         Spacer(1, 6),
@@ -479,14 +479,10 @@ with tab2:
         )
         st.plotly_chart(fig, use_container_width=True)
         donor_summary["CumulativeShare"] = donor_summary["PaymentShare"].fillna(0).cumsum()
-        st.dataframe(
-            donor_summary[["DonorLabel", "Pledges", "Payments", "PaymentShare", "CumulativeShare", "Records"]],
-            use_container_width=True, hide_index=True,
-            column_config={
-                "PaymentShare": st.column_config.NumberColumn("Payment share", format="%.1f%%"),
-                "CumulativeShare": st.column_config.NumberColumn("Cumulative share", format="%.1f%%")
-            }
-        )
+        donor_display = donor_summary[["DonorLabel", "Pledges", "Payments", "PaymentShare", "CumulativeShare", "Records"]].copy()
+        donor_display["PaymentShare"] = donor_display["PaymentShare"].map(lambda x: f"{x:.1%}" if pd.notna(x) else "—")
+        donor_display["CumulativeShare"] = donor_display["CumulativeShare"].map(lambda x: f"{x:.1%}" if pd.notna(x) else "—")
+        st.dataframe(donor_display, use_container_width=True, hide_index=True)
     st.caption("Donor dependency is measured using each donor's share of recorded payments in the selected data. HHI is the normalized sum of squared shares (0–1); it is descriptive, not a causal or credit-risk measure.")
     st.caption("Unknown donor names are retained as an 'Unspecified donor' category rather than silently excluded.")
 
