@@ -53,7 +53,7 @@ h2 { margin-top: 1.2rem; }
 [data-testid="stMetricValue"] { color: var(--cbpf-navy); font-weight: 750; font-size: clamp(1.15rem, 2vw, 1.75rem); }
 [data-testid="stMetricDelta"] { font-size: .8rem; }
 .stTabs [data-baseweb="tab-list"] {
-  gap: 6px; background: #E8EEF5; border-radius: 12px; padding: 6px;
+  gap: 6px; background: #142B4A; border-radius: 12px; padding: 6px;
 }
 .stTabs [data-baseweb="tab"],
 .stTabs [data-baseweb="tab"] *,
