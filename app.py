@@ -179,9 +179,85 @@ cols[2].metric(
 )
 cols[3].metric("Zero-payment records", f"{metrics['zero_payment_rows']:,}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Trends", "Donors & concentration", "Currency", "Data quality", "Explore & download"]
+tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["Executive Summary", "Trends", "Donors & concentration", "Currency", "Data quality", "Explore & download"]
 )
+
+with tab0:
+    st.subheader("Somalia humanitarian financing at a glance")
+    st.markdown(
+        "This dashboard analyses recorded contributions to the Somalia Country-Based "
+        "Pooled Fund (CBPF), using the OCHA dataset published through the Humanitarian "
+        "Data Exchange (HDX). The summary below updates automatically with the selected "
+        "fiscal years and donors."
+    )
+
+    summary_cols = st.columns(4)
+    summary_cols[0].metric("Contribution records", f"{metrics['records']:,}")
+    summary_cols[1].metric("Recorded pledges", money(metrics["pledges"]), help="Source-reported standardized amount units; currency not confirmed.")
+    summary_cols[2].metric("Recorded payments", money(metrics["payments"]), help="Source-reported standardized amount units; currency not confirmed.")
+    summary_cols[3].metric(
+        "Payment / pledge ratio",
+        "—" if pd.isna(metrics["payment_ratio"]) else f"{metrics['payment_ratio']:.1%}",
+        help="Total recorded payments divided by total recorded pledges for the filtered records."
+    )
+
+    donor_view = (
+        filtered.groupby("DonorName", dropna=False)["PaidAmt"]
+        .sum().sort_values(ascending=False)
+    )
+    leading_donor = donor_view.index[0] if len(donor_view) and donor_view.iloc[0] > 0 else None
+    leading_share = float(donor_view.iloc[0] / donor_view.sum()) if leading_donor is not None and donor_view.sum() else np.nan
+
+    st.markdown("#### Key findings")
+    finding_cols = st.columns(2)
+    with finding_cols[0]:
+        st.metric(
+            "Top-five donor share of payments",
+            "—" if pd.isna(metrics["top5_share"]) else f"{metrics['top5_share']:.1%}",
+            help="Share of total recorded payments accounted for by the five largest donors."
+        )
+        if leading_donor is not None:
+            st.write(f"**Largest recorded payment contributor:** {leading_donor} "
+                     f"({leading_share:.1%} of payments).")
+        else:
+            st.write("No positive recorded payments are available for the current selection.")
+    with finding_cols[1]:
+        st.metric("Pledge less payment", money(metrics["difference"]))
+        st.metric("Records with zero recorded payments", f"{metrics['zero_payment_rows']:,}")
+
+    st.markdown("#### What the figures suggest")
+    if pd.notna(metrics["payment_ratio"]):
+        if metrics["payment_ratio"] >= 0.95:
+            st.write("Recorded payments are high relative to recorded pledges in the selected data. "
+                     "The remaining pledge-payment difference should be examined at contribution level.")
+        elif metrics["payment_ratio"] >= 0.75:
+            st.write("Recorded payments are below recorded pledges in the selected data. "
+                     "Reviewing outstanding balances by donor and contribution may help identify where differences are concentrated.")
+        else:
+            st.write("The recorded payment-to-pledge ratio is comparatively low in the selected data. "
+                     "Further review by donor, fiscal year and contribution record is recommended.")
+    else:
+        st.write("A payment-to-pledge ratio cannot be calculated for the current selection.")
+
+    if pd.notna(metrics["top5_share"]) and metrics["top5_share"] >= 0.60:
+        st.write("Payments are concentrated among a small group of major donors. "
+                 "This makes donor diversification an important consideration when interpreting financing resilience.")
+    elif pd.notna(metrics["top5_share"]):
+        st.write("The five largest donors account for a smaller share of recorded payments in this selection; "
+                 "review the donor breakdown for the full distribution.")
+
+    st.markdown("#### Interpretation and limitations")
+    st.info(
+        "Currency: PledgeAmt and PaidAmt are shown in source-reported standardized amount units. "
+        "The CSV alone does not establish the reporting currency, so these totals must not be labelled USD "
+        "without confirmation from the source data dictionary.\n\n"
+        "Scope: This dataset records contributions. It does not by itself measure fund allocations, "
+        "project expenditures, implementation performance, humanitarian outputs or beneficiary outcomes.\n\n"
+        "Coverage: Future fiscal-year records and unpaid balances should be interpreted in context; "
+        "a pledge without a recorded payment is not automatically overdue."
+    )
+    st.caption("Source: OCHA, Somalia – CBPF Allocations and Contributions, Humanitarian Data Exchange (HDX).")
 
 with tab1:
     st.subheader("Annual pledges and payments")
