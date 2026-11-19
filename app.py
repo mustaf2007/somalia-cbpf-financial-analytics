@@ -10,6 +10,8 @@ Important: PledgeAmt and PaidAmt are source-standardized fields. Confirm their
 reporting currency from source metadata before labeling them USD.
 """
 from pathlib import Path
+from io import BytesIO
+import requests
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -98,16 +100,38 @@ def money(value) -> str:
 st.title("Somalia Humanitarian Financing Intelligence")
 st.caption("Country-Based Pooled Fund (CBPF) contributions • donor, pledge, payment and concentration analysis")
 
-uploaded = st.sidebar.file_uploader("Upload CBPF contributions CSV", type=["csv"])
+SOURCE_CSV_URL = "https://data.humdata.org/dataset/520c52a6-6caf-4cba-aecb-a57c063bffc9/resource/0e12f814-0de7-471e-9dfb-35a4fe6200ab/download/som_cbpf_contributions.csv"
+
+@st.cache_data(ttl=21600, show_spinner=False)
+def load_hdx_csv():
+    """Download the latest published CSV from the official HDX resource."""
+    response = requests.get(SOURCE_CSV_URL, timeout=45)
+    response.raise_for_status()
+    response.encoding = "utf-8"
+    return pd.read_csv(BytesIO(response.content)), response.headers.get("Last-Modified")
+
+uploaded = st.sidebar.file_uploader("Upload another CBPF contributions CSV (optional)", type=["csv"])
+default_path = Path(__file__).parent / "som_cbpf_contributions.csv"
+source_status = ""
 if uploaded is not None:
     raw = pd.read_csv(uploaded)
+    source_status = "Uploaded CSV"
+elif default_path.exists():
+    raw = pd.read_csv(default_path)
+    source_status = "Local CSV"
 else:
-    default_path = Path(__file__).parent / "som_cbpf_contributions.csv"
-    raw = pd.read_csv(default_path) if default_path.exists() else None
+    try:
+        with st.spinner("Loading the latest Somalia CBPF dataset from OCHA HDX..."):
+            raw, source_modified = load_hdx_csv()
+        source_status = "OCHA HDX live dataset"
+    except Exception as exc:
+        st.error(f"Could not retrieve the OCHA HDX dataset automatically: {exc}")
+        st.info("You can still upload an authorized CSV using the sidebar. Check the source link below.")
+        st.link_button("Open the official HDX dataset", "https://data.humdata.org/dataset/520c52a6-6caf-4cba-aecb-a57c063bffc9")
+        st.stop()
 
-if raw is None:
-    st.info("Upload your authorized som_cbpf_contributions.csv file using the sidebar.")
-    st.stop()
+st.caption(f"Data source: {source_status} • Original dataset: Somalia - CBPF Allocations and Contributions (OCHA)")
+st.markdown("[View source dataset and licensing information on HDX](https://data.humdata.org/dataset/520c52a6-6caf-4cba-aecb-a57c063bffc9)")
 
 try:
     df = clean_data(raw)
