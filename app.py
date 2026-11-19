@@ -24,6 +24,83 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 
 st.set_page_config(page_title="Somalia CBPF Financial Intelligence", page_icon="📊", layout="wide")
 
+# --- Visual theme: institutional navy and teal ---
+st.markdown("""
+<style>
+:root {
+  --cbpf-navy: #142B4A;
+  --cbpf-blue: #1D456B;
+  --cbpf-teal: #087E8B;
+  --cbpf-gold: #D9A441;
+  --cbpf-ink: #243447;
+  --cbpf-muted: #64748B;
+  --cbpf-bg: #F3F6FA;
+}
+.stApp { background: var(--cbpf-bg); color: var(--cbpf-ink); }
+[data-testid="stHeader"] { background: rgba(243,246,250,.92); }
+[data-testid="stMainBlockContainer"] { padding-top: 1.6rem; padding-bottom: 2.5rem; max-width: 1500px; }
+[data-testid="stSidebar"] { background: #EAF0F6; border-right: 1px solid #DCE4ED; }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 { color: var(--cbpf-navy); }
+h1, h2, h3 { color: var(--cbpf-navy); letter-spacing: -0.025em; }
+h2 { margin-top: 1.2rem; }
+[data-testid="stMetric"] {
+  background: #FFFFFF; border: 1px solid #E1E8F0; border-radius: 14px;
+  padding: 16px 18px; box-shadow: 0 3px 12px rgba(20,43,74,.045);
+  min-height: 112px;
+}
+[data-testid="stMetricLabel"] { color: #64748B; font-size: .82rem; font-weight: 650; }
+[data-testid="stMetricValue"] { color: var(--cbpf-navy); font-weight: 750; font-size: clamp(1.15rem, 2vw, 1.75rem); }
+[data-testid="stMetricDelta"] { font-size: .8rem; }
+.stTabs [data-baseweb="tab-list"] {
+  gap: 6px; background: #E8EEF5; border-radius: 12px; padding: 6px;
+}
+.stTabs [data-baseweb="tab"] {
+  height: 42px; border-radius: 9px; padding: 0 14px;
+  color: #43556B; font-weight: 650; background: transparent;
+}
+.stTabs [aria-selected="true"] { background: #FFFFFF !important; color: var(--cbpf-teal) !important; box-shadow: 0 1px 5px rgba(20,43,74,.10); }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--cbpf-teal); }
+div[data-testid="stAlert"] { border-radius: 12px; border-width: 1px; }
+.stDownloadButton button, .stLinkButton a, .stButton button {
+  border-radius: 9px; font-weight: 650; border: 1px solid #C9D5E2;
+}
+.stDownloadButton button[kind="primary"], .stButton button[kind="primary"] {
+  background: var(--cbpf-teal); border-color: var(--cbpf-teal); color: white;
+}
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+  border: 1px solid #E1E8F0; border-radius: 12px; overflow: hidden; background: white;
+}
+hr { border-color: #DCE4ED; }
+.cbpf-hero {
+  background: linear-gradient(115deg, #142B4A 0%, #1D456B 62%, #087E8B 100%);
+  border-radius: 18px; padding: 27px 30px; margin: 0 0 18px 0;
+  color: white; box-shadow: 0 8px 24px rgba(20,43,74,.13);
+  position: relative; overflow: hidden;
+}
+.cbpf-hero:after {
+  content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%;
+  right: -60px; top: -105px; border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 0 0 22px rgba(255,255,255,.035), 0 0 0 48px rgba(255,255,255,.025);
+}
+.cbpf-eyebrow { color: #B9DDE1; font-size: .72rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 9px; }
+.cbpf-title { color: #FFFFFF; font-size: clamp(1.65rem, 3vw, 2.35rem); line-height: 1.13; font-weight: 780; letter-spacing: -.035em; margin: 0 0 8px 0; }
+.cbpf-subtitle { color: #E2EDF5; font-size: .98rem; line-height: 1.5; max-width: 850px; margin: 0; }
+.cbpf-source { color: #D2E5EA; font-size: .78rem; margin-top: 16px; }
+.cbpf-section-note { color: var(--cbpf-muted); font-size: .88rem; }
+@media (max-width: 700px) {
+  [data-testid="stMainBlockContainer"] { padding-left: 1rem; padding-right: 1rem; }
+  .cbpf-hero { padding: 22px 20px; border-radius: 14px; }
+  .stTabs [data-baseweb="tab-list"] { flex-wrap: wrap; }
+  .stTabs [data-baseweb="tab"] { font-size: .78rem; padding: 0 9px; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+px.defaults.template = "plotly_white"
+px.defaults.color_discrete_sequence = ["#087E8B", "#D9A441", "#1D456B", "#6B8E9E", "#8AA3B8", "#A7B6C5"]
+
+
 REQUIRED = ["FiscalYear", "DonorName", "PledgeAmt", "PaidAmt"]
 DATE_COLS = ["PledgeDate", "PipeLineDate", "PaidDate", "ExpectedDate"]
 AMOUNT_COLS = ["PledgeAmt", "PaidAmt", "PledgeAmtLocal", "PaidAmtLocal",
@@ -198,8 +275,14 @@ def build_pdf_report(metrics: dict, donor_summary: pd.DataFrame, annual_summary:
     return buffer.getvalue()
 
 
-st.title("Somalia Humanitarian Financing Intelligence")
-st.caption("Country-Based Pooled Fund (CBPF) contributions • donor, pledge, payment and concentration analysis")
+st.markdown("""
+<div class="cbpf-hero">
+  <div class="cbpf-eyebrow">Somalia • Humanitarian financing intelligence</div>
+  <div class="cbpf-title">Somalia Humanitarian Financing Intelligence</div>
+  <p class="cbpf-subtitle">Country-Based Pooled Fund (CBPF) contributions — donor performance, pledge and payment trends, and financing concentration.</p>
+  <div class="cbpf-source">OFFICIAL DATA SOURCE · OCHA HUMANITARIAN DATA EXCHANGE (HDX)</div>
+</div>
+""", unsafe_allow_html=True)
 
 SOURCE_CSV_URL = "https://data.humdata.org/dataset/520c52a6-6caf-4cba-aecb-a57c063bffc9/resource/0e12f814-0de7-471e-9dfb-35a4fe6200ab/download/som_cbpf_contributions.csv"
 
