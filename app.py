@@ -16,6 +16,11 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 
 st.set_page_config(page_title="Somalia CBPF Financial Intelligence", page_icon="📊", layout="wide")
 
@@ -97,6 +102,102 @@ def money(value) -> str:
     return "—" if pd.isna(value) else f"{value:,.2f}"
 
 
+def build_pdf_report(metrics: dict, donor_summary: pd.DataFrame, annual_summary: pd.DataFrame,
+                     year_range_label: str, donor_count: int) -> bytes:
+    """Create a filtered PDF report from the currently selected contribution records."""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
+                            topMargin=17*mm, bottomMargin=17*mm)
+    styles = getSampleStyleSheet()
+    story = [
+        Paragraph("Somalia Humanitarian Financing Intelligence", styles["Title"]),
+        Paragraph("CBPF Contributions — Analytical Report", styles["Heading2"]),
+        Paragraph(f"Selected fiscal years: {year_range_label} | Donors selected: {donor_count}", styles["Normal"]),
+        Spacer(1, 8),
+        Paragraph("Executive summary", styles["Heading1"]),
+        Paragraph(
+            f"The selected data contain {metrics['records']:,} contribution records from "
+            f"{metrics['donors']:,} donors. Recorded pledges total {money(metrics['pledges'])} "
+            f"source units and recorded payments total {money(metrics['payments'])} source units. "
+            f"The payment-to-pledge ratio is "
+            f"{'not available' if pd.isna(metrics['payment_ratio']) else f\"{metrics['payment_ratio']:.1%}\"}.",
+            styles["BodyText"]
+        ),
+        Spacer(1, 6),
+    ]
+    kpi_rows = [
+        ["Indicator", "Value"],
+        ["Pledge less payment (source units)", money(metrics["difference"])],
+        ["Top-one donor share of payments", "—" if pd.isna(metrics.get("top1_share")) else f"{metrics['top1_share']:.1%}"],
+        ["Top-three donor share of payments", "—" if pd.isna(metrics.get("top3_share")) else f"{metrics['top3_share']:.1%}"],
+        ["Top-five donor share of payments", "—" if pd.isna(metrics.get("top5_share")) else f"{metrics['top5_share']:.1%}"],
+        ["Normalized HHI (0–1)", "—" if pd.isna(metrics.get("hhi")) else f"{metrics['hhi']:.4f}"],
+        ["Records with zero recorded payments", f"{metrics['zero_payment_rows']:,}"],
+    ]
+    story += [Table(kpi_rows, colWidths=[105*mm, 55*mm]), Spacer(1, 10),
+              Paragraph("Donor dependency analysis", styles["Heading1"])]
+    if not donor_summary.empty:
+        donor_rows = [["Donor", "Pledges", "Payments", "Payment share"]]
+        for _, row in donor_summary.head(10).iterrows():
+            donor_rows.append([str(row["DonorLabel"]), money(row["Pledges"]),
+                               money(row["Payments"]), f"{row['PaymentShare']:.1%}" if pd.notna(row.get("PaymentShare")) else "—"])
+        story.append(Table(donor_rows, repeatRows=1, colWidths=[55*mm, 38*mm, 38*mm, 29*mm]))
+    else:
+        story.append(Paragraph("No donor payment records are available for this selection.", styles["BodyText"]))
+    story += [Spacer(1, 10), Paragraph("Year-on-year contribution analysis", styles["Heading1"])]
+    if not annual_summary.empty:
+        annual_rows = [["Fiscal year", "Pledges", "YoY change", "Payments", "YoY change"]]
+        for _, row in annual_summary.iterrows():
+            annual_rows.append([
+                str(int(row["FiscalYear"])),
+                money(row["PledgeAmt"]),
+                "—" if pd.isna(row["PledgeYoYPct"]) else f"{row['PledgeYoYPct']:+.1f}%",
+                money(row["PaidAmt"]),
+                "—" if pd.isna(row["PaidYoYPct"]) else f"{row['PaidYoYPct']:+.1f}%"
+            ])
+        story.append(Table(annual_rows, repeatRows=1, colWidths=[22*mm, 36*mm, 28*mm, 36*mm, 28*mm]))
+    story += [
+        Spacer(1, 10), Paragraph("Methodology and limitations", styles["Heading1"]),
+        Paragraph(
+            "Donor shares are calculated as each donor's recorded payments divided by total recorded "
+            "payments in the selected records. Top-one, top-three and top-five shares sum the largest "
+            "donor shares. The normalized Herfindahl–Hirschman Index (HHI) is the sum of squared donor "
+            "payment shares and ranges from 0 to 1. Year-on-year growth compares a fiscal year only with "
+            "the immediately preceding fiscal year; it is not calculated across missing years.",
+            styles["BodyText"]),
+        Spacer(1, 5),
+        Paragraph(
+            "Currency: PledgeAmt and PaidAmt are source-standardized fields. The CSV alone does not "
+            "establish their reporting currency; values are therefore labelled source units, not USD. "
+            "The dataset records contributions and does not measure allocations, expenditures, project "
+            "outputs or beneficiary outcomes. Current-year and future-year records may be incomplete; "
+            "a pledge without a recorded payment is not automatically overdue.",
+            styles["BodyText"]),
+        Spacer(1, 8),
+        Paragraph("Source: OCHA, Somalia – CBPF Allocations and Contributions, Humanitarian Data Exchange (HDX).",
+                  styles["Italic"])
+    ]
+    table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#17365D")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#C8D0D9")),
+        ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+        ("LEADING", (0, 0), (-1, -1), 9),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F6F9")]),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ])
+    for item in story:
+        if isinstance(item, Table):
+            item.setStyle(table_style)
+    doc.build(story)
+    return buffer.getvalue()
+
+
 st.title("Somalia Humanitarian Financing Intelligence")
 st.caption("Country-Based Pooled Fund (CBPF) contributions • donor, pledge, payment and concentration analysis")
 
@@ -155,6 +256,49 @@ selected_donors = st.sidebar.multiselect("Donors", donors, default=donors)
 filtered = filtered[filtered["DonorName"].isin(selected_donors)] if selected_donors else filtered.iloc[0:0]
 
 metrics = make_metrics(filtered)
+
+# Donor-level payment concentration; unknown donor names remain visible as a separate group.
+donor_summary = filtered.groupby("DonorName", dropna=False).agg(
+    Pledges=("PledgeAmt", "sum"), Payments=("PaidAmt", "sum"),
+    Records=("PaidAmt", "count")
+).reset_index()
+donor_summary["DonorLabel"] = donor_summary["DonorName"].fillna("Unspecified donor")
+total_donor_payments = donor_summary["Payments"].sum()
+donor_summary["PaymentShare"] = (
+    donor_summary["Payments"] / total_donor_payments if total_donor_payments > 0 else np.nan
+)
+donor_summary = donor_summary.sort_values("Payments", ascending=False, na_position="last").reset_index(drop=True)
+positive_shares = donor_summary.loc[donor_summary["PaymentShare"] > 0, "PaymentShare"].dropna()
+metrics["top1_share"] = float(positive_shares.head(1).sum()) if len(positive_shares) else np.nan
+metrics["top3_share"] = float(positive_shares.head(3).sum()) if len(positive_shares) else np.nan
+metrics["hhi"] = float((positive_shares ** 2).sum()) if len(positive_shares) else np.nan
+
+annual = (
+    filtered.dropna(subset=["FiscalYear"])
+    .groupby("FiscalYear")[["PledgeAmt", "PaidAmt"]].sum()
+    .reset_index().sort_values("FiscalYear")
+)
+annual["PreviousFiscalYear"] = annual["FiscalYear"] - 1
+previous = annual[["FiscalYear", "PledgeAmt", "PaidAmt"]].copy()
+previous["FiscalYear"] = previous["FiscalYear"] + 1
+previous = previous.rename(columns={"PledgeAmt": "PreviousPledges", "PaidAmt": "PreviousPayments"})
+annual = annual.merge(previous, on="FiscalYear", how="left")
+annual["PledgeYoYChange"] = annual["PledgeAmt"] - annual["PreviousPledges"]
+annual["PaidYoYChange"] = annual["PaidAmt"] - annual["PreviousPayments"]
+annual["PledgeYoYPct"] = np.where(
+    annual["PreviousPledges"] > 0,
+    annual["PledgeYoYChange"] / annual["PreviousPledges"] * 100, np.nan
+)
+annual["PaidYoYPct"] = np.where(
+    annual["PreviousPayments"] > 0,
+    annual["PaidYoYChange"] / annual["PreviousPayments"] * 100, np.nan
+)
+annual["YearStatus"] = np.where(
+    annual["FiscalYear"] > pd.Timestamp.now().year, "Future fiscal year",
+    np.where(annual["FiscalYear"] == pd.Timestamp.now().year, "Current calendar year; may be incomplete",
+             "Historical fiscal year; completeness not independently verified")
+)
+
 st.warning(
     "Currency note: PledgeAmt and PaidAmt are displayed as source-reported standardized "
     "amounts. The CSV alone does not establish their reporting currency. Verify the "
@@ -261,9 +405,9 @@ with tab0:
 
 with tab1:
     st.subheader("Annual pledges and payments")
-    annual = filtered.groupby("FiscalYear", dropna=True)[["PledgeAmt", "PaidAmt"]].sum().reset_index()
     if not annual.empty:
-        long = annual.melt("FiscalYear", var_name="Measure", value_name="Amount")
+        long = annual.melt("FiscalYear", value_vars=["PledgeAmt", "PaidAmt"],
+                           var_name="Measure", value_name="Amount")
         fig = px.bar(
             long, x="FiscalYear", y="Amount", color="Measure", barmode="group",
             title="Annual totals (source-reported amount units)"
@@ -271,6 +415,40 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No records match the selected filters.")
+
+    st.subheader("Year-on-year changes")
+    st.caption("Growth is calculated against the immediately preceding fiscal year only. A missing prior year or a zero prior-year value produces no growth rate.")
+    if not annual.empty:
+        yoy_cols = st.columns(2)
+        latest_valid = annual.dropna(subset=["PledgeYoYPct", "PaidYoYPct"], how="all")
+        if not latest_valid.empty:
+            latest = latest_valid.iloc[-1]
+            yoy_cols[0].metric("Latest annual pledge change",
+                               "—" if pd.isna(latest["PledgeYoYPct"]) else f"{latest['PledgeYoYPct']:+.1f}%",
+                               help=f"Fiscal year {int(latest['FiscalYear'])} compared with fiscal year {int(latest['FiscalYear'])-1}.")
+            yoy_cols[1].metric("Latest annual payment change",
+                               "—" if pd.isna(latest["PaidYoYPct"]) else f"{latest['PaidYoYPct']:+.1f}%",
+                               help=f"Fiscal year {int(latest['FiscalYear'])} compared with fiscal year {int(latest['FiscalYear'])-1}.")
+        yoy_long = annual.melt("FiscalYear", value_vars=["PledgeYoYPct", "PaidYoYPct"],
+                               var_name="Measure", value_name="YoY growth (%)")
+        yoy_long["Measure"] = yoy_long["Measure"].map({
+            "PledgeYoYPct": "Pledges", "PaidYoYPct": "Payments"
+        })
+        fig = px.line(yoy_long, x="FiscalYear", y="YoY growth (%)", color="Measure",
+                      markers=True, title="Year-on-year growth (%)")
+        fig.add_hline(y=0, line_dash="dot", line_color="gray")
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(
+            annual[["FiscalYear", "PledgeAmt", "PledgeYoYChange", "PledgeYoYPct",
+                    "PaidAmt", "PaidYoYChange", "PaidYoYPct", "YearStatus"]],
+            use_container_width=True, hide_index=True
+        )
+        st.caption("Fiscal-year status is a cautious calendar-year flag, not confirmation that a reporting period is complete. Future-year records are not interpreted as overdue.")
+    st.download_button(
+        "Download year-on-year analysis CSV",
+        annual.to_csv(index=False).encode("utf-8"),
+        "som_cbpf_year_on_year_analysis.csv", "text/csv"
+    )
 
     st.subheader("Contribution timing")
     if "PledgeDate" in filtered and filtered["PledgeDate"].notna().any():
@@ -284,28 +462,33 @@ with tab1:
         st.info("No usable pledge dates are available.")
 
 with tab2:
-    st.subheader("Largest donors by payments")
-    record_count = ("ContributionCode", "count") if "ContributionCode" in filtered else ("PaidAmt", "count")
-    donor_summary = filtered.groupby("DonorName", dropna=False).agg(
-        Pledges=("PledgeAmt", "sum"), Payments=("PaidAmt", "sum"),
-        Records=record_count
-    ).reset_index().sort_values("Payments", ascending=False)
+    st.subheader("Donor dependency and payment concentration")
+    dep_cols = st.columns(4)
+    dep_cols[0].metric("Top-one donor share", "—" if pd.isna(metrics["top1_share"]) else f"{metrics['top1_share']:.1%}")
+    dep_cols[1].metric("Top-three donor share", "—" if pd.isna(metrics["top3_share"]) else f"{metrics['top3_share']:.1%}")
+    dep_cols[2].metric("Top-five donor share", "—" if pd.isna(metrics["top5_share"]) else f"{metrics['top5_share']:.1%}")
+    dep_cols[3].metric("Normalized HHI", "—" if pd.isna(metrics["hhi"]) else f"{metrics['hhi']:.4f}",
+                       help="Sum of squared donor payment shares. Ranges from near 0 to 1; higher values indicate greater concentration.")
 
     if not donor_summary.empty:
+        plot_donors = donor_summary.head(15).sort_values("Payments").copy()
         fig = px.bar(
-            donor_summary.head(15).sort_values("Payments"),
-            x="Payments", y="DonorName", orientation="h",
-            title="Top 15 donors by recorded payments"
+            plot_donors, x="Payments", y="DonorLabel", orientation="h",
+            title="Top 15 donors by recorded payments",
+            hover_data={"PaymentShare": ":.1%", "Pledges": ":,.2f"}
         )
         st.plotly_chart(fig, use_container_width=True)
-        if donor_summary["Payments"].sum() > 0:
-            donor_summary["PaymentShare"] = donor_summary["Payments"] / donor_summary["Payments"].sum()
-            ordered = donor_summary.sort_values("Payments", ascending=False)
-            donor_summary["CumulativeShare"] = ordered["PaymentShare"].cumsum().reindex(donor_summary.index)
-            st.metric("Top-five donor payment share", f"{top_share(donor_summary.set_index('DonorName')['Payments'], 5):.1%}")
-            st.dataframe(donor_summary.sort_values("Payments", ascending=False),
-                         use_container_width=True, hide_index=True)
-    st.caption("HHI is a descriptive concentration measure based on donors' shares of recorded payments.")
+        donor_summary["CumulativeShare"] = donor_summary["PaymentShare"].fillna(0).cumsum()
+        st.dataframe(
+            donor_summary[["DonorLabel", "Pledges", "Payments", "PaymentShare", "CumulativeShare", "Records"]],
+            use_container_width=True, hide_index=True,
+            column_config={
+                "PaymentShare": st.column_config.NumberColumn("Payment share", format="%.1f%%"),
+                "CumulativeShare": st.column_config.NumberColumn("Cumulative share", format="%.1f%%")
+            }
+        )
+    st.caption("Donor dependency is measured using each donor's share of recorded payments in the selected data. HHI is the normalized sum of squared shares (0–1); it is descriptive, not a causal or credit-risk measure.")
+    st.caption("Unknown donor names are retained as an 'Unspecified donor' category rather than silently excluded.")
 
 with tab3:
     st.subheader("Local-currency composition")
@@ -349,6 +532,17 @@ with tab4:
     st.caption("Payments greater than pledges are flagged for review, not automatically treated as errors.")
 
 with tab5:
+    st.subheader("Downloadable analytical report")
+    year_label = f"{int(year_range[0])}–{int(year_range[1])}" if years else "All available years"
+    pdf_bytes = build_pdf_report(metrics, donor_summary, annual, year_label, len(selected_donors))
+    st.download_button(
+        "Download filtered analytical report (PDF)",
+        data=pdf_bytes,
+        file_name="somalia_cbpf_financial_analytics_report.pdf",
+        mime="application/pdf"
+    )
+    st.caption("The PDF uses the current fiscal-year and donor filters. Amounts are labelled in source units because the standardized fields' currency is not confirmed.")
+
     st.subheader("Filtered contribution records")
     st.dataframe(filtered, use_container_width=True, hide_index=True)
     st.download_button(
@@ -370,6 +564,7 @@ with tab5:
 
 st.divider()
 st.caption(
-    "Analytical use only. Contribution records do not show allocations, expenditures, "
-    "project outputs or beneficiary outcomes."
+    "Analytical use only. This contribution dataset does not show allocations, expenditures, "
+    "project outputs or beneficiary outcomes. Allocation and expenditure analysis requires "
+    "additional compatible source datasets."
 )
