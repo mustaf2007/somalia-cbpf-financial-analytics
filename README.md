@@ -4,7 +4,8 @@ An interactive Streamlit dashboard for exploring Somalia Country-Based Pooled Fu
 
 ## Features
 
-- Upload a CBPF contributions CSV through the sidebar
+- Automatically retrieve the latest published Somalia CBPF contributions CSV from the OCHA Humanitarian Data Exchange (HDX)
+- Optionally upload another CBPF contributions CSV through the sidebar
 - Clean text fields, currencies, amounts and dates
 - Treat source placeholder dates beginning with `0001-01-01` as missing
 - Calculate pledge/payment differences and payment ratios
@@ -23,7 +24,11 @@ python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Upload your authorized copy of `som_cbpf_contributions.csv` using the dashboard sidebar. The source dataset is intentionally **not included** in this public repository. Do not commit it unless you have confirmed that redistribution is permitted.
+The dashboard downloads the CSV directly from the official [OCHA HDX Somalia CBPF dataset](https://data.humdata.org/dataset/520c52a6-6caf-4cba-aecb-a57c063bffc9) when it starts. The download is cached for six hours per app session to reduce repeated requests. You may still upload another CSV through the sidebar. The source data file is not copied into this GitHub repository; the app retrieves it from HDX.
+
+## Data source and attribution
+
+The app retrieves `som_cbpf_contributions.csv` from OCHA's Humanitarian Data Exchange (HDX), dataset **Somalia - CBPF Allocations and Contributions**. Please review the dataset's current metadata and licensing terms on HDX. Attribute OCHA/HDX when reusing the data and check the dataset page for any specific conditions.
 
 ## Data interpretation and limitations
 
