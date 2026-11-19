@@ -24,6 +24,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 
 st.set_page_config(page_title="Somalia CBPF Financial Intelligence", page_icon="📊", layout="wide")
 
+# --- User-selectable dashboard themes ---
+THEMES = {
+    "Light": {"bg":"#F3F6FA","sidebar":"#EAF0F6","card":"#FFFFFF","text":"#243447","muted":"#52677D","border":"#DCE4ED","nav":"#142B4A","accent":"#087E8B","hero":"linear-gradient(115deg,#142B4A 0%,#1D456B 62%,#087E8B 100%)","plot":"plotly_white","palette":["#087E8B","#D9A441","#1D456B","#6B8E9E","#8AA3B8","#A7B6C5"]},
+    "Dark": {"bg":"#111827","sidebar":"#172334","card":"#1F2D40","text":"#F1F5F9","muted":"#C0CCDA","border":"#35465B","nav":"#0B1220","accent":"#38BFC3","hero":"linear-gradient(115deg,#0B1220 0%,#173653 62%,#087E8B 100%)","plot":"plotly_dark","palette":["#38BFC3","#F2C66D","#79A9E0","#A6C7D8","#B6A6E0","#8FC7A8"]},
+    "Blue": {"bg":"#EAF2FF","sidebar":"#DCE9FC","card":"#FFFFFF","text":"#153E75","muted":"#315B91","border":"#C8D9F0","nav":"#153E75","accent":"#2878C8","hero":"linear-gradient(115deg,#153E75 0%,#245EA5 62%,#2878C8 100%)","plot":"plotly_white","palette":["#2878C8","#E0A33A","#153E75","#5D91C9","#8CAFD6","#79A9A0"]},
+    "Green": {"bg":"#EAF5EF","sidebar":"#DDEDE4","card":"#FFFFFF","text":"#185C42","muted":"#356B53","border":"#C9E0D2","nav":"#185C42","accent":"#25845F","hero":"linear-gradient(115deg,#185C42 0%,#236B55 62%,#25845F 100%)","plot":"plotly_white","palette":["#25845F","#D9A441","#185C42","#70A88A","#9ABDA8","#7A9FA1"]},
+    "High Contrast": {"bg":"#FFFFFF","sidebar":"#F0F0F0","card":"#FFFFFF","text":"#111111","muted":"#333333","border":"#555555","nav":"#111111","accent":"#005FCC","hero":"linear-gradient(115deg,#111111 0%,#333333 62%,#005FCC 100%)","plot":"plotly_white","palette":["#005FCC","#B00020","#111111","#006B4F","#6A3D9A","#8A4B08"]},
+}
+theme_name = st.sidebar.selectbox("Dashboard appearance", list(THEMES.keys()), index=0)
+theme = THEMES[theme_name]
+
 # --- Visual theme: institutional navy and teal ---
 st.markdown("""
 <style>
@@ -197,8 +208,39 @@ hr { border-color: #DCE4ED; }
 </style>
 """, unsafe_allow_html=True)
 
-px.defaults.template = "plotly_white"
-px.defaults.color_discrete_sequence = ["#087E8B", "#D9A441", "#1D456B", "#6B8E9E", "#8AA3B8", "#A7B6C5"]
+# Apply selected theme colours to all major interface surfaces and controls.
+st.markdown(f"""
+<style>
+.stApp, [data-testid="stAppViewContainer"] {{ background: {theme["bg"]} !important; color: {theme["text"]} !important; }}
+[data-testid="stHeader"] {{ background: {theme["bg"]} !important; }}
+[data-testid="stSidebar"], [data-testid="stSidebar"] > div {{ background: {theme["sidebar"]} !important; color: {theme["text"]} !important; border-color: {theme["border"]} !important; }}
+[data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] [data-testid="stWidgetLabel"], [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {{ color: {theme["text"]} !important; }}
+h1, h2, h3, h4, p, li, label, [data-testid="stMarkdownContainer"] {{ color: {theme["text"]}; }}
+[data-testid="stCaptionContainer"], .cbpf-section-note {{ color: {theme["muted"]} !important; }}
+[data-testid="stMetric"] {{ background: {theme["card"]} !important; border: 1px solid {theme["border"]} !important; }}
+[data-testid="stMetricLabel"] {{ color: {theme["muted"]} !important; }}
+[data-testid="stMetricValue"] {{ color: {theme["text"]} !important; }}
+[data-testid="stTabs"] [data-baseweb="tab-list"] {{ background: {theme["nav"]} !important; }}
+[data-testid="stTabs"] button[role="tab"] {{ background: transparent !important; }}
+[data-testid="stTabs"] button[role="tab"], [data-testid="stTabs"] button[role="tab"] * {{ color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; opacity: 1 !important; }}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{ background: {theme["card"]} !important; border-radius: 8px !important; }}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"], [data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {{ color: {theme["accent"]} !important; -webkit-text-fill-color: {theme["accent"]} !important; }}
+.cbpf-hero {{ background: {theme["hero"]} !important; }}
+[data-testid="stDataFrame"], [data-testid="stTable"] {{ background: {theme["card"]} !important; border-color: {theme["border"]} !important; }}
+[data-testid="stSidebar"] [data-baseweb="select"] > div, [data-testid="stSidebar"] [data-testid="stFileUploader"] section, [data-testid="stSidebar"] [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {{ background: {theme["card"]} !important; color: {theme["text"]} !important; border-color: {theme["border"]} !important; }}
+[data-testid="stSidebar"] [data-baseweb="tag"] {{ background: {theme["bg"]} !important; border-color: {theme["border"]} !important; }}
+[data-testid="stSidebar"] [data-baseweb="tag"] span {{ color: {theme["text"]} !important; }}
+[data-testid="stSidebar"] [data-baseweb="slider"] [role="slider"] {{ background: {theme["accent"]} !important; border-color: {theme["accent"]} !important; }}
+.stDownloadButton button, .stLinkButton a, .stButton button {{ border-color: {theme["border"]} !important; }}
+.stDownloadButton button[kind="primary"], .stButton button[kind="primary"] {{ background: {theme["accent"]} !important; border-color: {theme["accent"]} !important; color: #FFFFFF !important; }}
+div[data-testid="stAlert"] {{ background: {theme["card"]} !important; color: {theme["text"]} !important; border-color: {theme["border"]} !important; }}
+hr {{ border-color: {theme["border"]} !important; }}
+</style>
+""", unsafe_allow_html=True)
+
+# Apply the selected palette to all Plotly figures.
+px.defaults.template = theme["plot"]
+px.defaults.color_discrete_sequence = theme["palette"]
 
 
 REQUIRED = ["FiscalYear", "DonorName", "PledgeAmt", "PaidAmt"]
