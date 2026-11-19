@@ -102,6 +102,36 @@ hr { border-color: #DCE4ED; }
   .stTabs [data-baseweb="tab-list"] { flex-wrap: wrap; }
   .stTabs [data-baseweb="tab"] { font-size: .78rem; padding: 0 9px; }
 }
+/* Streamlit tab text: target the actual stTabs test-id container.
+   The previous .stTabs class selector does not exist in all Streamlit builds. */
+[data-testid="stTabs"] button[role="tab"],
+[data-testid="stTabs"] button[role="tab"] p,
+[data-testid="stTabs"] button[role="tab"] div,
+[data-testid="stTabs"] button[role="tab"] span,
+[data-testid="stTabs"] button[role="tab"] * {
+  color: #33465C !important;
+  -webkit-text-fill-color: #33465C !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p,
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] div,
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] span,
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+  color: #087E8B !important;
+  -webkit-text-fill-color: #087E8B !important;
+  opacity: 1 !important;
+  font-weight: 750 !important;
+}
+[data-testid="stTabs"] button[role="tab"]:hover,
+[data-testid="stTabs"] button[role="tab"]:hover * {
+  color: #075E68 !important;
+  -webkit-text-fill-color: #075E68 !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  background: #E8EEF5 !important;
+}
 /* Contrast and light-theme consistency refinements */
 [data-testid="stSidebar"] { color: #243447 !important; }
 [data-testid="stSidebar"] label,
